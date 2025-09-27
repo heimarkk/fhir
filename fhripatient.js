@@ -9,6 +9,7 @@ class FHIRPatientManager {
     //this.baseUrl = 'https://hapi.fhir.org/baseR4';
     this.baseUrl = "https://fhir-bootcamp.medblocks.com/fhir/";
     this.patients = [];
+    this.selectedPatient = null; // Add selected patient state
     this.init();
   }
 
@@ -174,6 +175,64 @@ class FHIRPatientManager {
   }
 
   /**
+   * Set selected patient as state
+   */
+  setSelectedPatient(patient) {
+    this.selectedPatient = patient;
+    this.log(
+      `Selected patient set: ${this.getPatientName(patient)} (ID: ${
+        patient.id
+      })`
+    );
+  }
+
+  /**
+   * Get current selected patient
+   */
+  getSelectedPatient() {
+    return this.selectedPatient;
+  }
+
+  /**
+   * Clear selected patient
+   */
+  clearSelectedPatient() {
+    if (this.selectedPatient) {
+      this.log(
+        `Cleared selected patient: ${this.getPatientName(this.selectedPatient)}`
+      );
+    }
+    this.updateSubmitButton("create");
+    this.selectedPatient = null;
+  }
+
+  /**
+   * Update submit button caption and functionality
+   */
+  updateSubmitButton(mode = "create") {
+    const submitButton = document.querySelector(
+      '#patientForm button[type="submit"]'
+    );
+    if (submitButton) {
+      if (mode === "update") {
+        submitButton.textContent = "Update Patient";
+        submitButton.onclick = (e) => {
+          e.preventDefault();
+          if (window.updateSelectedPatient) {
+            window.updateSelectedPatient();
+          }
+        };
+      } else {
+        submitButton.textContent = "Create Patient";
+        submitButton.onclick = (e) => {
+          e.preventDefault();
+          this.createPatient();
+        };
+      }
+    }
+  }
+
+  /**
    * Create a new patient
    */
   async createPatient() {
@@ -197,8 +256,15 @@ class FHIRPatientManager {
         this.showSuccess(
           `Patient created successfully: ${patientName} (ID: ${createdPatient.id})`
         );
+
+        // Set selected patient when new patient has been successfully added
+        this.setSelectedPatient(createdPatient);
+
+        // Change submit button caption to Update
+        this.updateSubmitButton("update");
+
         this.displayFHIRResource(createdPatient);
-        this.clearForm();
+        // Don't clear form after creation to allow immediate updates
       } else {
         const errorText = await response.text();
         throw new Error(`HTTP ${response.status}: ${errorText}`);
@@ -324,6 +390,13 @@ class FHIRPatientManager {
       if (response.ok) {
         const patient = await response.json();
         this.populateFormWithPatient(patient);
+
+        // Set selected patient when patient is loaded for update
+        this.setSelectedPatient(patient);
+
+        // Change submit button caption to Update
+        this.updateSubmitButton("update");
+
         this.showSuccess(
           `Patient loaded for update: ${this.getPatientName(patient)}`
         );
@@ -367,6 +440,10 @@ class FHIRPatientManager {
 
       if (response.ok || response.status === 204) {
         this.showSuccess(`Patient ${patientId} deleted successfully`);
+
+        // Clear selected patient when patient is deleted
+        this.clearSelectedPatient();
+
         document.getElementById("updatePatientId").value = "";
       } else if (response.status === 404) {
         this.showError(`Patient with ID ${patientId} not found`);
@@ -543,6 +620,9 @@ class FHIRPatientManager {
     const form = document.getElementById("patientForm");
     if (form) {
       form.reset();
+      // Reset submit button to create mode
+      this.updateSubmitButton("create");
+      this.setSelectedPatient(null);
       this.log("Form cleared");
     }
   }
