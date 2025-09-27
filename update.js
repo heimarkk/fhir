@@ -23,6 +23,12 @@ async function updateSelectedPatient() {
   try {
     // Create updated patient resource from form data
     const updatedPatientResource = fhirPatient.createPatientResource();
+
+    // Exit immediately if validation failed
+    if (!updatedPatientResource) {
+      return;
+    }
+
     updatedPatientResource.id = selectedPatient.id;
 
     fhirPatient.log(`Updating patient ${selectedPatient.id}...`);
