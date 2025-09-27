@@ -123,6 +123,63 @@ class FHIRPatientManager {
     const email = document.getElementById("email")?.value || "";
     const address = document.getElementById("address")?.value || "";
 
+    // Validation checks
+    if (!firstName.trim()) {
+      this.showError("First name cannot be null or empty");
+      return null;
+    }
+
+    if (!lastName.trim()) {
+      this.showError("Last name cannot be null or empty");
+      return null;
+    }
+
+    if (!gender.trim()) {
+      this.showError("Gender cannot be null or empty");
+      return null;
+    }
+
+    // Validate birth date
+    if (!birthDate.trim()) {
+      this.showError("Birth date cannot be null or empty");
+      return null;
+    }
+    //Policy check for entered data
+    if (birthDate) {
+      const birthDateObj = new Date(birthDate);
+      const today = new Date();
+
+      if (isNaN(birthDateObj.getTime())) {
+        this.showError("Birth date must be a valid date");
+        return null;
+      }
+
+      if (birthDateObj > today) {
+        this.showError("Birth date cannot be in the future");
+        return null;
+      }
+    }
+
+    // Validate email format if provided
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        this.showError("Email must be in valid format (example@domain.com)");
+        return null;
+      }
+    }
+
+    // Validate phone number format if provided
+    if (phone.trim()) {
+      const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+      if (!phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ""))) {
+        this.showError(
+          "Phone number must contain only digits and valid formatting characters"
+        );
+        return null;
+      }
+    }
+
     const patient = {
       resourceType: "Patient",
       active: true,
@@ -238,6 +295,12 @@ class FHIRPatientManager {
   async createPatient() {
     try {
       const patientResource = this.createPatientResource();
+
+      // Exit immediately if validation failed
+      if (!patientResource) {
+        return;
+      }
+
       this.log("Creating patient...");
       this.displayFHIRResource(patientResource);
 
@@ -348,8 +411,9 @@ class FHIRPatientManager {
    */
   async getAllPatients() {
     try {
-      this.log("Fetching all patients (limited to 20)...");
-      const response = await fetch(`${this.baseUrl}/Patient?_count=20`, {
+      this.log("Fetching all patients...");
+      //const response = await fetch(`${this.baseUrl}/Patient?_count=20`, {
+      const response = await fetch(`${this.baseUrl}/Patient`, {
         method: "GET",
         headers: {
           Accept: "application/fhir+json",
